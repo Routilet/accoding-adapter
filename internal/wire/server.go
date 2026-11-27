@@ -4,8 +4,10 @@ package wire
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"github.com/Routilet/accoding-adapter/accoding"
 	"io"
 	"unicode/utf8"
 )
@@ -54,8 +56,14 @@ func decode(line []byte, v any) error {
 }
 
 // Serve reads one request at a time. Malformed framing terminates the stream.
-// There are no background operations, network calls, or submission methods in phase 01.
+// No startup/background networking or submission methods.
 func Serve(in io.Reader, out io.Writer) error {
+	return serve(in, out, accoding.New())
+}
+
+func serve(in io.Reader, out io.Writer, client accountClient) error {
+	defer client.Logout()
+	a := accountHandler{client: client}
 	s := bufio.NewScanner(in)
 	s.Buffer(make([]byte, 4096), MaxLine+2)
 	s.Split(splitLine)
@@ -78,8 +86,10 @@ func Serve(in io.Reader, out io.Writer) error {
 			} else if p.Protocol != Protocol {
 				resp.Error = &Failure{"incompatible_protocol", "unsupported protocol"}
 			} else {
-				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities"}})
+				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout"}})
 			}
+		case "account", "login", "logout":
+			resp.Result, resp.Error = a.handle(context.Background(), req.Method, req.Params)
 		default:
 			resp.Error = &Failure{"method_not_found", "method not available"}
 		}
