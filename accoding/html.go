@@ -2,6 +2,9 @@ package accoding
 
 import (
 	"encoding/xml"
+ "github.com/yuin/goldmark"
+ "github.com/yuin/goldmark/ast"
+ "github.com/yuin/goldmark/text"
 	"io"
 	"regexp"
 	"strings"
@@ -258,40 +261,31 @@ func samplesHTML(n *node) ([]Sample, []string) {
 	}
 	return r.result()
 }
+// Use CommonMark block parsing rather than interpreting indented data as fences.
 func samplesMarkdown(s string) ([]Sample, []string) {
-	r := sampleReader{}
-	s = strings.ReplaceAll(s, "\r\n", "\n")
-	var block strings.Builder
-	fence := ""
-	for _, line := range strings.SplitAfter(s, "\n") {
-		trim := strings.TrimSpace(line)
-		if fence != "" {
-			if strings.HasPrefix(trim, fence) && strings.Trim(trim, string(fence[0])) == "" {
-				r.block(block.String())
-				block.Reset()
-				fence = ""
-			} else {
-				block.WriteString(line)
-			}
-			continue
-		}
-		if strings.HasPrefix(trim, "```") || strings.HasPrefix(trim, "~~~") {
-			ch := trim[0]
-			i := 0
-			for i < len(trim) && trim[i] == ch {
-				i++
-			}
-			fence = trim[:i]
-			continue
-		}
-		if strings.HasPrefix(trim, "#") {
-			r.heading(strings.TrimLeft(trim, "# "))
-		} else {
-			r.paragraph(trim)
-		}
-	}
-	if fence != "" {
-		return nil, []string{"题面代码块未闭合，请手动核对公开样例"}
-	}
-	return r.result()
+ r:=sampleReader{}
+ source:=[]byte(strings.ReplaceAll(s,"\r\n","\n"))
+ doc:=goldmark.New().Parser().Parse(text.NewReader(source))
+ for n:=doc.FirstChild();n!=nil;n=n.NextSibling(){
+  switch n.Kind(){
+  case ast.KindHeading:r.heading(string(n.Text(source)))
+  case ast.KindParagraph:
+   p:=strings.TrimSpace(string(n.Text(source)))
+   // Observed explicit output label after an input sample, not general prose.
+   if (p=="输出："||p=="输出:") && r.kind=="input" && len(r.inputs)>len(r.outputs){r.heading("输出样例")}else{r.paragraph(p)}
+  case ast.KindCodeBlock,ast.KindFencedCodeBlock:
+   if r.kind==""{continue}
+   lines:=n.Lines()
+   if n.Kind()==ast.KindFencedCodeBlock {
+    // CommonMark accepts unterminated fences; never import an ambiguous sample.
+    if lines.Len()==0{return nil,[]string{"空或未闭合的围栏样例，请手动核对"}}
+    last:=lines.At(lines.Len()-1)
+    rest:=strings.TrimLeft(string(source[last.Stop:]),"\n")
+    next:=strings.TrimSpace(strings.SplitN(rest,"\n",2)[0])
+    if !(strings.HasPrefix(next,"```")&&strings.Trim(next,"`")==""||strings.HasPrefix(next,"~~~")&&strings.Trim(next,"~")==""){return nil,[]string{"题面代码块未闭合，请手动核对公开样例"}}
+   }
+   r.block(string(lines.Value(source)))
+  }
+ }
+ return r.result()
 }

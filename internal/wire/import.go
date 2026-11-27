@@ -71,6 +71,7 @@ type ImportProblem struct {
 	Samples   []accoding.Sample `json:"samples"`
 	Warnings  []string          `json:"warnings"`
 	Special   bool              `json:"special"`
+ Statement string `json:"statement,omitempty"`
 }
 type ImportResult struct {
 	AccountID string          `json:"accountId"`
@@ -99,7 +100,7 @@ func projectProblem(p accoding.Problem) ImportProblem {
 	if warnings == nil {
 		warnings = []string{}
 	}
-	return ImportProblem{t, p.Title, p.Label, u, samples, warnings, p.Special}
+	return ImportProblem{Target:t,Title:p.Title,Label:p.Label,SourceURL:u,Samples:samples,Warnings:warnings,Special:p.Special}
 }
 func (a *accountHandler) importRequest(ctx context.Context, method string, raw json.RawMessage) (json.RawMessage, *Failure) {
 	var p struct {
@@ -135,7 +136,8 @@ func (a *accountHandler) importRequest(ctx context.Context, method string, raw j
 		a.clear()
 		return nil, &Failure{"auth", "identity changed"}
 	}
-	result := ImportResult{AccountID: string(u.ID), Problems: []ImportProblem{}}
+	var documents []string
+ result := ImportResult{AccountID: string(u.ID), Problems: []ImportProblem{}}
 	if link.Kind == "contest" {
 		v, e := c.ImportContest(ctx, link.ID)
 		if e != nil {
@@ -144,6 +146,7 @@ func (a *accountHandler) importRequest(ctx context.Context, method string, raw j
 		result.Title = v.Title
 		for _, p := range v.Problems {
 			result.Problems = append(result.Problems, projectProblem(p))
+   documents=append(documents,p.Statement.Content)
 		}
 	} else {
 		v, e := c.GetProblem(ctx, accoding.Target{Kind: link.Kind, ProblemID: link.ID, Service: link.Service})
@@ -152,11 +155,16 @@ func (a *accountHandler) importRequest(ctx context.Context, method string, raw j
 		}
 		result.Title = v.Title
 		result.Problems = append(result.Problems, projectProblem(v))
+  documents=append(documents,v.Statement.Content)
 	}
 	if len(result.Problems) == 0 || len(result.Problems) > 200 {
 		return nil, &Failure{"protocol", "unsupported problem count"}
 	}
-	b, e := json.Marshal(result)
+	if method=="import_document" {
+  // The old import stays wire compatible. A separate opt-in method carries the local document.
+  for i:=range result.Problems { if len(documents[i])>512<<10 {return nil,&Failure{"protocol","statement exceeds limit"}};result.Problems[i].Statement=documents[i] }
+ }
+ b, e := json.Marshal(result)
 	if e != nil || len(b) > MaxLine-256 {
 		return nil, &Failure{"protocol", "import exceeds message limit"}
 	}

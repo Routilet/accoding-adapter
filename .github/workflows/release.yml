@@ -1,7 +1,9 @@
 name: Adapter npm beta
 on:
   push:
-    branches: [release/adapter-v0.1.0-beta.1]
+    branches: [release/adapter-v0.1.0-beta.2]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -47,7 +49,7 @@ jobs:
           go test -count=1 ./...
           go vet ./...
           version="$(node -p 'require("./package.json").version')"
-          test "$version" = 0.1.0-beta.1
+          test "$version" = 0.1.0-beta.2
           mkdir -p "out/$TARGET"
           bin="out/$TARGET/accoding-adapter"
           if [[ "$GOOS" == windows ]]; then bin="$bin.exe"; fi
@@ -122,7 +124,7 @@ jobs:
           node scripts/package-beta.mjs verify out/install/node_modules/@routilet/accoding-adapter
   publish:
     needs: [package, installed]
-    if: github.repository == 'Routilet/accoding-adapter' && github.ref == 'refs/heads/release/adapter-v0.1.0-beta.1' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'Routilet/accoding-adapter' && github.ref == 'refs/heads/release/adapter-v0.1.0-beta.2' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -145,7 +147,7 @@ jobs:
           set -euo pipefail
           cd release
           sha256sum -c SHA256SUMS
-          archive=routilet-accoding-adapter-0.1.0-beta.1.tgz
+          archive=routilet-accoding-adapter-0.1.0-beta.2.tgz
           test -f "$archive"
-          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.0-beta.1"'
+          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.0-beta.2"'
           npm publish "$archive" --access public --tag next --ignore-scripts

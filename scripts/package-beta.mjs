@@ -5,7 +5,7 @@ import {spawnSync} from "node:child_process";
 const root=resolve(process.argv[3]??".");
 const read=p=>JSON.parse(readFileSync(join(root,p),"utf8"));
 const pkg=read("package.json");
-const expected="0.1.0-beta.1";
+const expected="0.1.0-beta.2";
 if(pkg.name!=="@routilet/accoding-adapter"||pkg.version!==expected)throw Error("package identity mismatch");
 const paths={"win32-x64":"bin/win32-x64/accoding-adapter.exe","darwin-arm64":"bin/darwin-arm64/accoding-adapter"};
 const hash=p=>createHash("sha256").update(readFileSync(join(root,p))).digest("hex");
@@ -24,7 +24,7 @@ else if(process.argv[2]==="verify"){
  const run=spawnSync(executable,["--stdio"],{input:requests.map(x=>JSON.stringify(x)).join("\n")+"\n",encoding:"utf8",timeout:10000,windowsHide:true,maxBuffer:65536});
  if(run.error||run.status!==0||run.stderr)throw Error("offline smoke failed");
  const replies=run.stdout.trimEnd().split("\n").map(JSON.parse);
- const methods=["capabilities","account","login","logout","resolve","import","prepare","submit","reconcile","result","status"];
+ const methods=["capabilities","account","login","logout","resolve","import","prepare","submit","reconcile","result","status","import_document","contests","status_detail","result_detail","contest_status"];
  if(replies.length!==2||replies[0].id!==1||replies[0].error||replies[0].result.version!==expected||replies[0].result.adapter!=="accoding"||replies[0].result.protocol!==manifest.protocol||JSON.stringify(replies[0].result.methods)!==JSON.stringify(methods)||replies[1].id!==2||replies[1].error||replies[1].result.state!=="signed_out")throw Error("offline handshake failed");
  console.log("Verified "+pkg.name+"@"+pkg.version+" "+target);
 }else throw Error("expected manifest or verify");
