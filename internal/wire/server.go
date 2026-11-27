@@ -97,8 +97,10 @@ func serveJournal(in io.Reader, out io.Writer, client accountClient, j accoding.
 			} else if p.Protocol != Protocol {
 				resp.Error = &Failure{"incompatible_protocol", "unsupported protocol"}
 			} else {
-				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import", "prepare", "submit", "reconcile"}})
+				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import", "prepare", "submit", "reconcile", "result", "status"}})
 			}
+		case "result", "status":
+			resp.Result, resp.Error = a.judge(context.Background(), req.Method, req.Params)
 		case "reconcile":
 			resp.Result, resp.Error = a.reconcile(context.Background(), req.Params)
 		case "prepare", "submit":
