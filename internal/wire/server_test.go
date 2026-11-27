@@ -23,7 +23,7 @@ func TestHandshakeAndErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	var caps Capabilities
-	if r.ID != 1 || r.Error != nil || json.Unmarshal(r.Result, &caps) != nil || caps.Adapter != "accoding" || caps.Protocol != Protocol || len(caps.Methods) != 4 {
+	if r.ID != 1 || r.Error != nil || json.Unmarshal(r.Result, &caps) != nil || caps.Adapter != "accoding" || caps.Protocol != Protocol || len(caps.Methods) != 6 {
 		t.Fatalf("bad handshake: %+v", r)
 	}
 	for i, want := range []string{"method_not_found", "incompatible_protocol", "invalid_params"} {

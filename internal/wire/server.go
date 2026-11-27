@@ -86,8 +86,10 @@ func serve(in io.Reader, out io.Writer, client accountClient) error {
 			} else if p.Protocol != Protocol {
 				resp.Error = &Failure{"incompatible_protocol", "unsupported protocol"}
 			} else {
-				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout"}})
+				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import"}})
 			}
+		case "resolve", "import":
+			resp.Result, resp.Error = a.importRequest(context.Background(), req.Method, req.Params)
 		case "account", "login", "logout":
 			resp.Result, resp.Error = a.handle(context.Background(), req.Method, req.Params)
 		default:
