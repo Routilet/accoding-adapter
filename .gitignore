@@ -1,0 +1,4 @@
+/accoding-probe
+/accoding-probe.exe
+*.test
+coverage.out
