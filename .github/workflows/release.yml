@@ -1,0 +1,151 @@
+name: Adapter npm beta
+on:
+  push:
+    branches: [release/adapter-v0.1.0-beta.1]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: adapter-beta-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            target: win32-x64
+            goos: windows
+            goarch: amd64
+          - runner: macos-15
+            target: darwin-arm64
+            goos: darwin
+            goarch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      TARGET: ${{ matrix.target }}
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Native regression and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -count=1 ./...
+          go vet ./...
+          version="$(node -p 'require("./package.json").version')"
+          test "$version" = 0.1.0-beta.1
+          mkdir -p "out/$TARGET"
+          bin="out/$TARGET/accoding-adapter"
+          if [[ "$GOOS" == windows ]]; then bin="$bin.exe"; fi
+          go build -trimpath -ldflags "-s -w -X github.com/Routilet/accoding-adapter/internal/wire.Version=$version" -o "$bin" ./cmd/accoding-adapter
+          if [[ "$GOOS" == darwin ]]; then
+            codesign --force --sign - "$bin"
+            codesign --verify --strict "$bin"
+          fi
+          tar -czf "out/$TARGET.tar.gz" -C out "$TARGET"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adapter-${{ matrix.target }}
+          path: out/${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: adapter-*
+          path: artifacts
+      - name: Pack both native binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p bin release
+          for target in win32-x64 darwin-arm64; do
+            tar -xzf "artifacts/adapter-$target/$target.tar.gz" -C bin
+          done
+          node scripts/package-beta.mjs manifest
+          npm pack --ignore-scripts --pack-destination release
+          (cd release && sha256sum *.tgz > SHA256SUMS)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adapter-npm-candidate
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+  installed:
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-2025, macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: adapter-npm-candidate
+          path: release
+      - name: Verify exact installed tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd release && sha256sum -c SHA256SUMS)
+          npm install --offline --ignore-scripts --no-audit --no-fund --no-package-lock --prefix out/install "$PWD"/release/*.tgz
+          node scripts/package-beta.mjs verify out/install/node_modules/@routilet/accoding-adapter
+  publish:
+    needs: [package, installed]
+    if: github.repository == 'Routilet/accoding-adapter' && github.ref == 'refs/heads/release/adapter-v0.1.0-beta.1' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org/
+      - uses: actions/download-artifact@v4
+        with:
+          name: adapter-npm-candidate
+          path: release
+      - name: Publish verified beta only
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum -c SHA256SUMS
+          archive=routilet-accoding-adapter-0.1.0-beta.1.tgz
+          test -f "$archive"
+          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.0-beta.1"'
+          npm publish "$archive" --access public --tag next --ignore-scripts
