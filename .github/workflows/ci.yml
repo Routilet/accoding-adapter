@@ -5,8 +5,9 @@ permissions:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-14, ubuntu-latest]
+        os: [windows-2025, macos-15, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +15,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      - name: Verify native architecture
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then test "$(go env GOARCH)" = arm64; fi
+          if [ "$RUNNER_OS" = Windows ]; then test "$(go env GOARCH)" = amd64; fi
       - run: go vet ./...
       - run: go test -v ./...
       - run: go build ./cmd/accoding-probe
