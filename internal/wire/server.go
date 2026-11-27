@@ -97,15 +97,17 @@ func serveJournal(in io.Reader, out io.Writer, client accountClient, j accoding.
 			} else if p.Protocol != Protocol {
 				resp.Error = &Failure{"incompatible_protocol", "unsupported protocol"}
 			} else {
-				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import", "prepare", "submit", "reconcile", "result", "status"}})
+				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import", "prepare", "submit", "reconcile", "result", "status", "import_document", "contests", "status_detail", "result_detail", "contest_status"}})
 			}
-		case "result", "status":
+		case "contests", "contest_status":
+   resp.Result,resp.Error=a.extraRead(context.Background(),req.Method,req.Params)
+  case "result", "status", "status_detail", "result_detail":
 			resp.Result, resp.Error = a.judge(context.Background(), req.Method, req.Params)
 		case "reconcile":
 			resp.Result, resp.Error = a.reconcile(context.Background(), req.Params)
 		case "prepare", "submit":
 			resp.Result, resp.Error = a.submissionRequest(context.Background(), req.Method, req.Params)
-		case "resolve", "import":
+		case "resolve", "import", "import_document":
 			resp.Result, resp.Error = a.importRequest(context.Background(), req.Method, req.Params)
 		case "account", "login", "logout":
 			resp.Result, resp.Error = a.handle(context.Background(), req.Method, req.Params)

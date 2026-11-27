@@ -15,6 +15,9 @@ type judgeResult struct {
 	ID       string `json:"id"`
 	Result   string `json:"result"`
 	Language string `json:"language"`
+ Score string `json:"score,omitempty"`
+ Detail string `json:"detail,omitempty"`
+ CreatedAt string `json:"createdAt,omitempty"`
 }
 type judgeStatus struct {
 	AccountID string          `json:"accountId"`
@@ -30,14 +33,14 @@ func checkedJudge(s accoding.Submission, t accoding.Target, u accoding.ID) (judg
 	if !judgeID.MatchString(string(s.ID)) || s.CreatorID != u || string(s.ProblemID) != t.ProblemID || s.Target != t || s.Result == "" || len(s.Result) > 128 || len(s.Lang) > 128 {
 		return judgeResult{}, false
 	}
-	return judgeResult{string(s.ID), s.Result, s.Lang}, true
+	return judgeResult{ID:string(s.ID),Result:s.Result,Language:s.Lang}, true
 }
 func (a *accountHandler) judge(ctx context.Context, method string, raw json.RawMessage) (json.RawMessage, *Failure) {
 	var p struct {
 		Target accoding.Target `json:"target"`
 		ID     string          `json:"id,omitempty"`
 	}
-	if decode(raw, &p) != nil || method == "result" && !judgeID.MatchString(p.ID) || method == "status" && p.ID != "" {
+	if decode(raw, &p) != nil || (method == "result" || method=="result_detail") && !judgeID.MatchString(p.ID) || (method == "status" || method=="status_detail") && p.ID != "" {
 		return nil, &Failure{"invalid_params", "invalid judge query"}
 	}
 	if a.user.ID == "" {
@@ -57,7 +60,7 @@ func (a *accountHandler) judge(ctx context.Context, method string, raw json.RawM
 	}
 	out := judgeStatus{AccountID: string(u.ID), Target: p.Target}
 	var records []accoding.Submission
-	if method == "result" {
+	if method == "result" || method=="result_detail" {
 		var s accoding.Submission
 		s, e = c.GetSubmission(ctx, p.Target, p.ID)
 		records = []accoding.Submission{s}
@@ -69,10 +72,11 @@ func (a *accountHandler) judge(ctx context.Context, method string, raw json.RawM
 	}
 	for _, s := range records {
 		r, valid := checkedJudge(s, p.Target, u.ID)
-		if !valid || method == "result" && r.ID != p.ID {
+		if !valid || (method == "result" || method=="result_detail") && r.ID != p.ID {
 			return nil, &Failure{"protocol", "judge identity mismatch"}
 		}
-		if r.Result == "AC" {
+		if method=="status_detail"||method=="result_detail"{r.Score=string(s.Score);r.Detail=s.Detail;r.CreatedAt=s.CreatedAt}
+  if r.Result == "AC" {
 			out.Accepted = true
 		}
 		if out.Latest == nil || laterID(r.ID, out.Latest.ID) {
