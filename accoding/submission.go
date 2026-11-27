@@ -170,7 +170,7 @@ func (c *Client) Submit(ctx context.Context, t Target, account ID, language, cod
 	r, err := e.request(ctx, "POST", action, body, ct, true)
 	var s Submission
 	confirmed := false
-	if err == nil && strings.Contains(r.header.Get("Content-Type"), "application/json") && json.Unmarshal(r.body, &s) == nil && s.verify(t, account) == nil && !before[s.ID] {
+	if err == nil && strings.Contains(r.header.Get("Content-Type"), "application/json") && json.Unmarshal(r.body, &s) == nil && s.verify(t, account) == nil && s.CreatorID == account && string(s.ProblemID) == t.ProblemID && s.Lang == language && !before[s.ID] {
 		confirmed = true
 	}
 	// Contest normally responds with JSON. Problemset redirect IDs are verified

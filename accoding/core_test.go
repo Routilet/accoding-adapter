@@ -288,3 +288,28 @@ func TestInvalidLoginAction(t *testing.T) {
 		t.Fatal(e, calls)
 	}
 }
+
+func TestPendingJournalReopen(t *testing.T) {
+	dir := t.TempDir()
+	j := FileJournal{dir}
+	a := Attempt{Account: "7", Target: Target{Kind: "problemset", ProblemID: "10"}, Language: "C99", SourceHash: sourceHash("code"), CreatedAt: time.Now().UTC()}
+	k, e := j.Begin(context.Background(), a)
+	if e != nil {
+		t.Fatal(e)
+	}
+	// Simulates process loss after Begin without Unknown or Resolve.
+	j = FileJournal{dir}
+	p, e := j.Pending(context.Background(), "7", "10")
+	if e != nil || p == nil || p.Key != k || !sameAttempt(p.Attempt, a) {
+		t.Fatal(p, e)
+	}
+	if p, e = j.Pending(context.Background(), "8", "10"); e != nil || p != nil {
+		t.Fatal(p, e)
+	}
+	if e = j.Resolve(context.Background(), k, Submission{ID: "1", Result: "AC", ProblemID: "10", CreatorID: "7", Lang: "C99"}); e != nil {
+		t.Fatal(e)
+	}
+	if p, e = j.Pending(context.Background(), "7", "10"); e != nil || p != nil {
+		t.Fatal(p, e)
+	}
+}

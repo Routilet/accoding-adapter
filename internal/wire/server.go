@@ -9,6 +9,8 @@ import (
 	"errors"
 	"github.com/Routilet/accoding-adapter/accoding"
 	"io"
+	"os"
+	"path/filepath"
 	"unicode/utf8"
 )
 
@@ -56,14 +58,23 @@ func decode(line []byte, v any) error {
 }
 
 // Serve reads one request at a time. Malformed framing terminates the stream.
-// No startup/background networking or submission methods.
+// No startup/background networking.
 func Serve(in io.Reader, out io.Writer) error {
-	return serve(in, out, accoding.New())
+	root, err := os.UserConfigDir()
+	var j accoding.Journal
+	if err == nil && filepath.IsAbs(root) {
+		j = accoding.FileJournal{Directory: filepath.Join(root, "Routilet", "accoding-adapter", "submissions-v1")}
+	}
+	return serveJournal(in, out, accoding.New(), j)
 }
 
 func serve(in io.Reader, out io.Writer, client accountClient) error {
+	return serveJournal(in, out, client, nil)
+}
+
+func serveJournal(in io.Reader, out io.Writer, client accountClient, j accoding.Journal) error {
 	defer client.Logout()
-	a := accountHandler{client: client}
+	a := accountHandler{client: client, journal: j}
 	s := bufio.NewScanner(in)
 	s.Buffer(make([]byte, 4096), MaxLine+2)
 	s.Split(splitLine)
@@ -86,8 +97,12 @@ func serve(in io.Reader, out io.Writer, client accountClient) error {
 			} else if p.Protocol != Protocol {
 				resp.Error = &Failure{"incompatible_protocol", "unsupported protocol"}
 			} else {
-				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import"}})
+				resp.Result, _ = json.Marshal(Capabilities{Protocol, "accoding", Version, []string{"capabilities", "account", "login", "logout", "resolve", "import", "prepare", "submit", "reconcile"}})
 			}
+		case "reconcile":
+			resp.Result, resp.Error = a.reconcile(context.Background(), req.Params)
+		case "prepare", "submit":
+			resp.Result, resp.Error = a.submissionRequest(context.Background(), req.Method, req.Params)
 		case "resolve", "import":
 			resp.Result, resp.Error = a.importRequest(context.Background(), req.Method, req.Params)
 		case "account", "login", "logout":

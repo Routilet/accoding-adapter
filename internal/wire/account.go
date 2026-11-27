@@ -18,11 +18,13 @@ type AccountState struct {
 	Nickname string `json:"nickname,omitempty"`
 }
 type accountHandler struct {
-	client accountClient
-	user   accoding.User
+	client   accountClient
+	user     accoding.User
+	journal  accoding.Journal
+	prepared *submitPlan
 }
 
-func (a *accountHandler) clear() { a.client.Logout(); a.user = accoding.User{} }
+func (a *accountHandler) clear() { a.client.Logout(); a.user = accoding.User{}; a.prepared = nil }
 func (a *accountHandler) state() AccountState {
 	if a.user.ID == "" {
 		return AccountState{State: "signed_out"}
