@@ -5,7 +5,7 @@ import {spawnSync} from "node:child_process";
 const root=resolve(process.argv[3]??".");
 const read=p=>JSON.parse(readFileSync(join(root,p),"utf8"));
 const pkg=read("package.json");
-const expected="0.1.0-beta.2";
+const expected="0.1.0";
 if(pkg.name!=="@routilet/accoding-adapter"||pkg.version!==expected)throw Error("package identity mismatch");
 const paths={"win32-x64":"bin/win32-x64/accoding-adapter.exe","darwin-arm64":"bin/darwin-arm64/accoding-adapter"};
 const hash=p=>createHash("sha256").update(readFileSync(join(root,p))).digest("hex");

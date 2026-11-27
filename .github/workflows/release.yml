@@ -1,14 +1,15 @@
-name: Adapter npm beta
+name: Adapter native release
 on:
   push:
-    branches: [release/adapter-v0.1.0-beta.2]
+    branches: [main]
+    paths: ['package.json', '.github/workflows/release.yml']
   pull_request:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: adapter-beta-${{ github.ref }}
+  group: adapter-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   build:
@@ -49,7 +50,7 @@ jobs:
           go test -count=1 ./...
           go vet ./...
           version="$(node -p 'require("./package.json").version')"
-          test "$version" = 0.1.0-beta.2
+          test "$version" = 0.1.0
           mkdir -p "out/$TARGET"
           bin="out/$TARGET/accoding-adapter"
           if [[ "$GOOS" == windows ]]; then bin="$bin.exe"; fi
@@ -124,7 +125,7 @@ jobs:
           node scripts/package-beta.mjs verify out/install/node_modules/@routilet/accoding-adapter
   publish:
     needs: [package, installed]
-    if: github.repository == 'Routilet/accoding-adapter' && github.ref == 'refs/heads/release/adapter-v0.1.0-beta.2' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'Routilet/accoding-adapter' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -139,7 +140,7 @@ jobs:
         with:
           name: adapter-npm-candidate
           path: release
-      - name: Publish verified beta only
+      - name: Publish verified stable candidate
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -147,7 +148,21 @@ jobs:
           set -euo pipefail
           cd release
           sha256sum -c SHA256SUMS
-          archive=routilet-accoding-adapter-0.1.0-beta.2.tgz
+          archive=routilet-accoding-adapter-0.1.0.tgz
           test -f "$archive"
-          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.0-beta.2"'
-          npm publish "$archive" --access public --tag next --ignore-scripts
+          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.0"'
+          code="$(curl --silent --show-error --output /tmp/adapter-version.json --write-out '%{http_code}' 'https://registry.npmjs.org/@routilet%2faccoding-adapter/0.1.0')"
+          case "$code" in
+            200) echo "Version already exists; verify registry tag without republishing." ;;
+            404) npm publish "$archive" --access public --tag latest --ignore-scripts ;;
+            *) echo "Registry lookup failed: HTTP $code"; exit 1 ;;
+          esac
+          for attempt in $(seq 1 18); do
+            if [[ "$(npm view @routilet/accoding-adapter@0.1.0 version --registry=https://registry.npmjs.org/)" == 0.1.0 ]] && [[ "$(npm view @routilet/accoding-adapter dist-tags.latest --registry=https://registry.npmjs.org/)" == 0.1.0 ]]; then
+              echo "Verified @routilet/accoding-adapter@0.1.0 (latest)" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Registry version or latest tag not yet verified; check before retrying."
+          exit 1
