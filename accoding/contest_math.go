@@ -1,7 +1,6 @@
 package accoding
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -9,35 +8,57 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-// Accoding contest descriptions have been observed with doubled escapes
-// in simple inline relations, e.g. $1 \\le n$. The JSON transport has already
-// been decoded; this is content normalization, not another JSON unescape.
-// Restrict it to known relation commands in inline dollar math, never code,
-// display math or formulas containing other potentially intentional line breaks.
-var doubledRelation = regexp.MustCompile(`\\\\(leq|geq|le|ge|sim)([^a-zA-Z]|$)`)
-
+// Accoding contest descriptions mix ordinary TeX with Markdown-escaped TeX.
+// Normalize the observed extra escape layer inside math only, after JSON decode.
+// Do not apply Markdown unescaping to the document or to arbitrary TeX escapes.
 func normalizeContestFormula(s string) string {
-	if strings.ContainsAny(s, "\r\n&") || strings.Contains(s, "\\begin") ||
-		strings.Contains(s, "\\end") || strings.Contains(s, "\\substack") ||
-		strings.Contains(s, "\\shortstack") || strings.Contains(s, "\\matrix") ||
-		strings.Contains(s, "\\\\\\" ) {
-		return s
-	}
-	// Check every doubled backslash, including adjacent commands. An unknown
-	// doubled sequence could be an intentional TeX line break; leave it alone.
-	for i := 0; i < len(s); i++ {
-		if s[i] != '\\' || i+1 >= len(s) || s[i+1] != '\\' {
+	multiline := strings.Contains(s, "\\begin{") || strings.Contains(s, "\\substack{") ||
+		strings.Contains(s, "\\shortstack{") || strings.Contains(s, "\\matrix{") ||
+		strings.ContainsRune(s, '&')
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] != '\\' {
+			b.WriteByte(s[i])
+			i++
 			continue
 		}
-		m := doubledRelation.FindStringIndex(s[i:])
-		if m == nil || m[0] != 0 {
-			return s
+		n := runLength(s, i, '\\')
+		end := i+n
+		next := byte(0)
+		if end < len(s) { next = s[end] }
+		// A triple backslash at a matrix row ending represents the
+		// Markdown-escaped TeX row separator. Keep genuine double separators.
+		if n == 3 && multiline && (next == '\r' || next == '\n') {
+			b.WriteString("\\\\")
+			i = end
+			continue
 		}
-		i++
+		// In ordinary inline or simple display math, a doubled escape
+		// before a TeX control word or escaped punctuation is extra Markdown
+		// escaping. Never confuse a row separator with an escaped command.
+		if n == 2 && !multiline && ((next >= 'a' && next <= 'z') ||
+			(next >= 'A' && next <= 'Z') || strings.ContainsRune("{}%&#$", rune(next))) {
+			b.WriteByte('\\')
+			i = end
+			continue
+		}
+		// Escaped underscores followed by an index are a Markdown escape,
+		// not literal underscores in the observed mathematical notation.
+		// Preserve escaped punctuation in text-bearing TeX groups.
+		if n == 1 && (next == '_' || next == '(' || next == ')') &&
+			!strings.Contains(s, "\\text") && !strings.Contains(s, "\\verb") {
+			if next != '_' || (i > 0 && end+1 < len(s) &&
+				(strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789)}]", rune(s[i-1]))) &&
+				(strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{", rune(s[end+1])))) {
+				b.WriteByte(next)
+				i = end+1
+				continue
+			}
+		}
+		b.WriteString(s[i:end])
+		i = end
 	}
-	// Do not consume the command's trailing delimiter: adjacent commands
-	// must remain independent. The scan above has already validated all pairs.
-	return strings.ReplaceAll(s, "\\\\", "\\")
+	return b.String()
 }
 
 func escapedAt(s string, pos int) bool {
@@ -61,15 +82,16 @@ func normalizeContestMathSpan(s string) string {
 		if s[i] == '`' && !escapedAt(s,i) {
 			n := runLength(s,i,'`')
 			j := i+n
+			matched := false
 			for j < len(s) {
 				k := strings.IndexByte(s[j:], '`')
 				if k < 0 { break }
 				j += k
 				r := runLength(s,j,'`')
 				j += r
-				if r == n { i = j; break }
+				if r == n { i = j; matched = true; break }
 			}
-			if i == j { continue }
+			if matched { continue }
 			i += n
 			continue
 		}
@@ -89,11 +111,11 @@ func normalizeContestMathSpan(s string) string {
 			if n == 2 { break }
 			i++; continue
 		}
-		if n == 1 {
-			old := s[i+1:end]
+		{
+			old := s[i+n:end]
 			normalized := normalizeContestFormula(old)
 			if normalized != old {
-				b.WriteString(s[last:i+1])
+				b.WriteString(s[last:i+n])
 				b.WriteString(normalized)
 				last = end
 			}
