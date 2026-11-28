@@ -36,8 +36,9 @@ func normalizeContestFormula(s string) string {
 		// In ordinary inline or simple display math, a doubled escape
 		// before a TeX control word or escaped punctuation is extra Markdown
 		// escaping. Never confuse a row separator with an escaped command.
-		if n == 2 && !multiline && ((next >= 'a' && next <= 'z') ||
-			(next >= 'A' && next <= 'Z') || strings.ContainsRune("{}%&#$", rune(next))) {
+		letter := func(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' }
+		if n == 2 && !multiline && ((end+1 < len(s) && letter(next) && letter(s[end+1])) ||
+			strings.ContainsRune("{}%&#$", rune(next))) {
 			b.WriteByte('\\')
 			i = end
 			continue
@@ -47,9 +48,9 @@ func normalizeContestFormula(s string) string {
 		// Preserve escaped punctuation in text-bearing TeX groups.
 		if n == 1 && (next == '_' || next == '(' || next == ')') &&
 			!strings.Contains(s, "\\text") && !strings.Contains(s, "\\verb") {
-			if next != '_' || (i > 0 && end+1 < len(s) &&
-				(strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789)}]", rune(s[i-1]))) &&
-				(strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{", rune(s[end+1])))) {
+			if next != '_' || (end+1 < len(s) &&
+				(i > 0 && strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789)}]", rune(s[i-1])) || s[end+1] == '{' && multiline) &&
+				strings.ContainsRune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{", rune(s[end+1]))) {
 				b.WriteByte(next)
 				i = end+1
 				continue
@@ -128,7 +129,7 @@ func normalizeContestMathSpan(s string) string {
 }
 
 func normalizeContestStatement(markdown string) string {
-	if !strings.Contains(markdown, "\\\\") { return markdown }
+	if !strings.Contains(markdown, "\\") { return markdown }
 	source := []byte(markdown)
 	doc := goldmark.New().Parser().Parse(text.NewReader(source))
 	var b strings.Builder
