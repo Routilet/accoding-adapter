@@ -14,7 +14,139 @@ func TestContestMathNormalization(t *testing.T) {
 		{`$1 \le n$`,`$1 \le n$`},
 		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
 		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
-		{`$x\\lemon$ $x\\le y\\z$`,`$x\\lemon$ $x\\le y\\z$`},
+		{`$O(n \\log n)$, $\\frac{a}{b}$, $\\gcd(a\_x,a\_y)package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		,`$O(n \log n)$, $\frac{a}{b}$, $\gcd(a_x,a_y)package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		},
+		{`$a\_{ij}$, $\log\_2 n$, $n\(1\le n\)package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		,`$a_{ij}$, $\log_2 n$, $n(1\le n)package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		},
+		{`$C\_i\in\\{0,1\\}$, $30\\%$, $40\%package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		,`$C_i\in\{0,1\}$, $30\%$, $40\%package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		},
+		{`$\text{foo\_bar}package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		,`$\text{foo\_bar}package accoding
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+func TestContestMathNormalization(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{`第一行 $1 \\le n \\le 10^5$，长度 $1 \\sim 20$。`,`第一行 $1 \le n \le 10^5$，长度 $1 \sim 20$。`},
+		{`$1 \le n$`,`$1 \le n$`},
+		{`$$\begin{matrix}1\\2\end{matrix}$$`,`$$\begin{matrix}1\\2\end{matrix}$$`},
+		{`$\begin{aligned}x\\le y\end{aligned}$`,`$\begin{aligned}x\\le y\end{aligned}$`},
+		},
+		{"$\\begin{bmatrix}\r\n1&1&0"+strings.Repeat("\\",3)+"\r\n0&1&0"+strings.Repeat("\\",2)+"\r\n0&1&1\r\n\\end{bmatrix}\r\n\\_{3\\times3}$","$\\begin{bmatrix}\r\n1&1&0"+strings.Repeat("\\",2)+"\r\n0&1&0"+strings.Repeat("\\",2)+"\r\n0&1&1\r\n\\end{bmatrix}\r\n_{3\\times3}$"},
 		{"`$1 \\\\le n$`", "`$1 \\\\le n$`"},
 		{"```\n$1 \\\\le n$\n```\n", "```\n$1 \\\\le n$\n```\n"},
 		{"    $1 \\\\le n$\n", "    $1 \\\\le n$\n"},
