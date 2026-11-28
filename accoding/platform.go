@@ -155,8 +155,9 @@ func getContest(ctx context.Context, e endpoint, id string) (Contest, error) {
 		if json.Unmarshal([]byte(p.Setting), &setting) != nil || len(languages(setting.Languages)) == 0 {
 			return Contest{}, fail(Protocol, "评测设置无法识别")
 		}
+		description := normalizeContestStatement(*p.Description)
 		samples, warnings := samplesMarkdown(*p.Description)
-		out.Problems = append(out.Problems, Problem{Target: Target{Kind: "contest", ContestID: id, ProblemID: string(p.ID)}, Title: p.Title, Label: contestLabel(i), Statement: Statement{"markdown", *p.Description, e.origin + "/contest-ng/index.html"}, Languages: languages(setting.Languages), Samples: samples, Warnings: warnings, TimeLimit: scalar(setting.Time), MemoryLimit: scalar(setting.Memory), Special: truthy(setting.Judge) || truthy(setting.Compare), order: i})
+		out.Problems = append(out.Problems, Problem{Target: Target{Kind: "contest", ContestID: id, ProblemID: string(p.ID)}, Title: p.Title, Label: contestLabel(i), Statement: Statement{"markdown", description, e.origin + "/contest-ng/index.html"}, Languages: languages(setting.Languages), Samples: samples, Warnings: warnings, TimeLimit: scalar(setting.Time), MemoryLimit: scalar(setting.Memory), Special: truthy(setting.Judge) || truthy(setting.Compare), order: i})
 	}
 	return out, nil
 }
