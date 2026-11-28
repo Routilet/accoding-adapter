@@ -50,7 +50,7 @@ jobs:
           go test -count=1 ./...
           go vet ./...
           version="$(node -p 'require("./package.json").version')"
-          test "$version" = 0.1.0
+          test "$version" = 0.1.1
           mkdir -p "out/$TARGET"
           bin="out/$TARGET/accoding-adapter"
           if [[ "$GOOS" == windows ]]; then bin="$bin.exe"; fi
@@ -148,18 +148,18 @@ jobs:
           set -euo pipefail
           cd release
           sha256sum -c SHA256SUMS
-          archive=routilet-accoding-adapter-0.1.0.tgz
+          archive=routilet-accoding-adapter-0.1.1.tgz
           test -f "$archive"
-          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.0"'
-          code="$(curl --silent --show-error --output /tmp/adapter-version.json --write-out '%{http_code}' 'https://registry.npmjs.org/@routilet%2faccoding-adapter/0.1.0')"
+          tar -xOzf "$archive" package/package.json | jq -e '.name == "@routilet/accoding-adapter" and .version == "0.1.1"'
+          code="$(curl --silent --show-error --output /tmp/adapter-version.json --write-out '%{http_code}' 'https://registry.npmjs.org/@routilet%2faccoding-adapter/0.1.1')"
           case "$code" in
             200) echo "Version already exists; verify registry tag without republishing." ;;
             404) npm publish "$archive" --access public --tag latest --ignore-scripts ;;
             *) echo "Registry lookup failed: HTTP $code"; exit 1 ;;
           esac
           for attempt in $(seq 1 18); do
-            if [[ "$(npm view @routilet/accoding-adapter@0.1.0 version --registry=https://registry.npmjs.org/)" == 0.1.0 ]] && [[ "$(npm view @routilet/accoding-adapter dist-tags.latest --registry=https://registry.npmjs.org/)" == 0.1.0 ]]; then
-              echo "Verified @routilet/accoding-adapter@0.1.0 (latest)" >> "$GITHUB_STEP_SUMMARY"
+            if [[ "$(npm view @routilet/accoding-adapter@0.1.1 version --registry=https://registry.npmjs.org/)" == 0.1.1 ]] && [[ "$(npm view @routilet/accoding-adapter dist-tags.latest --registry=https://registry.npmjs.org/)" == 0.1.1 ]]; then
+              echo "Verified @routilet/accoding-adapter@0.1.1 (latest)" >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             sleep 10
